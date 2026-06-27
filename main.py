@@ -16,8 +16,8 @@ PORT = int(os.getenv("PORT", 8080))
 async def main():
     if not TOKEN:
         raise SystemExit("DISCORD_TOKEN is not set.")
-    if not os.getenv("ANTHROPIC_API_KEY"):
-        raise SystemExit("ANTHROPIC_API_KEY is not set.")
+    if not os.getenv("GEMINI_API_KEY"):
+        raise SystemExit("GEMINI_API_KEY is not set.")
 
     from bot.client import bot
     from web.app import app

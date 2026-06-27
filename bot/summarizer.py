@@ -1,8 +1,8 @@
 import os
 from datetime import datetime, timedelta, timezone
 
-import anthropic
 import discord
+import google.generativeai as genai
 
 JST = timezone(timedelta(hours=9))
 
@@ -20,7 +20,8 @@ async def collect_messages(channel: discord.TextChannel, since: datetime) -> lis
 
 
 async def generate_summary(channels_messages: dict[str, list[str]]) -> str:
-    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+    model = genai.GenerativeModel("gemini-1.5-flash")
 
     sections = []
     for ch_name, lines in channels_messages.items():
@@ -43,9 +44,5 @@ async def generate_summary(channels_messages: dict[str, list[str]]) -> str:
         + "\n\n".join(sections)
     )
 
-    response = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=1500,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    return response.content[0].text
+    response = model.generate_content(prompt)
+    return response.text
