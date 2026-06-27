@@ -54,8 +54,10 @@ def _guild_channels(bot) -> list[dict]:
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request, _=Depends(verify)):
+    bot = _get_bot()
     groups = cfg.get_groups()
-    return render("index.html", request=request, groups=groups)
+    channel_map = {str(ch.id): ch.name for g in bot.guilds for ch in g.text_channels}
+    return render("index.html", request=request, groups=groups, channel_map=channel_map)
 
 
 @app.get("/groups/new", response_class=HTMLResponse)

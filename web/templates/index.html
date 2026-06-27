@@ -62,7 +62,7 @@
         <td class="group-name">{{ g.name }}</td>
         <td>
           {% for ch_id in g.target_channel_ids %}
-            <span class="tag">#{{ ch_id }}</span>
+            <span class="tag">#{{ channel_map.get(ch_id|string, ch_id) }}</span>
           {% endfor %}
         </td>
         <td>{{ g.schedule_day }} {{ '%02d'|format(g.schedule_hour) }}:{{ '%02d'|format(g.schedule_minute) }} JST</td>
