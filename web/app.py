@@ -6,13 +6,20 @@ import discord
 from fastapi import Depends, FastAPI, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from fastapi.templating import Jinja2Templates
+from jinja2 import Environment, FileSystemLoader
 
 from bot import config as cfg
 
 app = FastAPI()
 security = HTTPBasic()
-templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
+_jinja_env = Environment(
+    loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), "templates")),
+    autoescape=True,
+)
+
+
+def render(template_name: str, **ctx) -> HTMLResponse:
+    return HTMLResponse(_jinja_env.get_template(template_name).render(**ctx))
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "changeme")
 
@@ -46,14 +53,14 @@ async def index(request: Request, _=Depends(verify)):
         ]
         guilds_channels.append({"id": str(guild.id), "name": guild.name, "channels": channels})
 
-    return templates.TemplateResponse("index.html", {
-        "request": request,
-        "guilds_channels": guilds_channels,
-        "conf": conf,
-        "selected_ids": [str(i) for i in conf.get("target_channel_ids", [])],
-        "output_channel_id": str(conf.get("output_channel_id") or ""),
-        "guild_id": str(conf.get("guild_id") or ""),
-    })
+    return render("index.html",
+        request=request,
+        guilds_channels=guilds_channels,
+        conf=conf,
+        selected_ids=[str(i) for i in conf.get("target_channel_ids", [])],
+        output_channel_id=str(conf.get("output_channel_id") or ""),
+        guild_id=str(conf.get("guild_id") or ""),
+    )
 
 
 @app.post("/save")
