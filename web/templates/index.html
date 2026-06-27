@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>週次サマリー 管理画面</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #1e1f22; color: #dbdee1; min-height: 100vh; }
+    .container { max-width: 800px; margin: 0 auto; padding: 32px 16px; }
+    h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; color: #fff; }
+    .subtitle { color: #949ba4; font-size: 0.875rem; margin-bottom: 32px; }
+    .card { background: #2b2d31; border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+    .card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 16px; color: #fff; border-bottom: 1px solid #3f4147; padding-bottom: 8px; }
+    label { display: block; font-size: 0.8rem; font-weight: 600; color: #b5bac1; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+    select, input[type="number"] { width: 100%; background: #1e1f22; border: 1px solid #3f4147; border-radius: 6px; color: #dbdee1; padding: 8px 12px; font-size: 0.9rem; margin-bottom: 16px; }
+    .channel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-bottom: 8px; }
+    .channel-item { display: flex; align-items: center; gap: 8px; background: #1e1f22; border-radius: 6px; padding: 8px 12px; cursor: pointer; }
+    .channel-item:hover { background: #35373c; }
+    .channel-item input[type="checkbox"] { accent-color: #5865f2; width: 16px; height: 16px; cursor: pointer; }
+    .channel-item span { font-size: 0.875rem; }
+    .channel-item span::before { content: "# "; color: #949ba4; }
+    .schedule-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    .btn-row { display: flex; gap: 12px; margin-top: 8px; }
+    button { border: none; border-radius: 6px; padding: 10px 20px; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+    .btn-primary { background: #5865f2; color: #fff; }
+    .btn-primary:hover { background: #4752c4; }
+    .btn-secondary { background: #4e5058; color: #dbdee1; }
+    .btn-secondary:hover { background: #6d6f78; }
+    .alert { border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 0.875rem; }
+    .alert-success { background: #2d7d46; color: #dbdee1; }
+    select[multiple] { height: auto; min-height: 48px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>📅 週次サマリー 管理画面</h1>
+  <p class="subtitle">集計するチャンネルと送信スケジュールを設定します</p>
+
+  {% if request.query_params.get('saved') %}
+  <div class="alert alert-success">✅ 設定を保存しました</div>
+  {% endif %}
+  {% if request.query_params.get('ran') %}
+  <div class="alert alert-success">✅ サマリー生成を開始しました（Discordを確認してください）</div>
+  {% endif %}
+
+  <form method="post" action="/save">
+    <div class="card">
+      <h2>サーバー設定</h2>
+      <label>対象サーバー</label>
+      <select name="guild_id" id="guild_select" onchange="filterChannels()">
+        {% for g in guilds_channels %}
+        <option value="{{ g.id }}" {% if g.id == guild_id %}selected{% endif %}>{{ g.name }}</option>
+        {% endfor %}
+      </select>
+
+      <label>サマリー送信先チャンネル</label>
+      <select name="output_channel_id" id="output_select">
+        {% for g in guilds_channels %}
+          {% for ch in g.channels %}
+          <option value="{{ ch.id }}"
+            data-guild="{{ g.id }}"
+            {% if ch.id == output_channel_id %}selected{% endif %}>
+            #{{ ch.name }}
+          </option>
+          {% endfor %}
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="card">
+      <h2>集計対象チャンネル</h2>
+      <div class="channel-grid" id="channel_grid">
+        {% for g in guilds_channels %}
+          {% for ch in g.channels %}
+          <label class="channel-item" data-guild="{{ g.id }}">
+            <input type="checkbox" name="target_channel_ids" value="{{ ch.id }}"
+              {% if ch.id in selected_ids %}checked{% endif %}>
+            <span>{{ ch.name }}</span>
+          </label>
+          {% endfor %}
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>送信スケジュール（JST）</h2>
+      <div class="schedule-row">
+        <div>
+          <label>曜日</label>
+          <select name="schedule_day">
+            {% for d in [("monday","月曜"),("tuesday","火曜"),("wednesday","水曜"),("thursday","木曜"),("friday","金曜"),("saturday","土曜"),("sunday","日曜")] %}
+            <option value="{{ d[0] }}" {% if conf.schedule_day == d[0] %}selected{% endif %}>{{ d[1] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label>時（0〜23）</label>
+          <input type="number" name="schedule_hour" min="0" max="23" value="{{ conf.schedule_hour }}">
+        </div>
+        <div>
+          <label>分（0〜59）</label>
+          <input type="number" name="schedule_minute" min="0" max="59" value="{{ conf.schedule_minute }}">
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button type="submit" class="btn-primary">💾 設定を保存</button>
+    </div>
+  </form>
+
+  <form method="post" action="/run-now" style="margin-top: 12px;">
+    <button type="submit" class="btn-secondary">▶ 今すぐサマリーを生成</button>
+  </form>
+</div>
+
+<script>
+const allChannels = Array.from(document.querySelectorAll('[data-guild]'));
+
+function filterChannels() {
+  const guildId = document.getElementById('guild_select').value;
+  allChannels.forEach(el => {
+    el.style.display = el.dataset.guild === guildId ? '' : 'none';
+  });
+  document.querySelectorAll('#output_select option').forEach(opt => {
+    opt.style.display = opt.dataset.guild === guildId ? '' : 'none';
+  });
+}
+filterChannels();
+</script>
+</body>
+</html>
