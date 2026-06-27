@@ -2,7 +2,7 @@ import os
 from datetime import datetime, timedelta, timezone
 
 import discord
-import google.generativeai as genai
+from google import genai
 
 JST = timezone(timedelta(hours=9))
 
@@ -20,8 +20,7 @@ async def collect_messages(channel: discord.TextChannel, since: datetime) -> lis
 
 
 async def generate_summary(channels_messages: dict[str, list[str]]) -> str:
-    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
     sections = []
     for ch_name, lines in channels_messages.items():
@@ -44,5 +43,8 @@ async def generate_summary(channels_messages: dict[str, list[str]]) -> str:
         + "\n\n".join(sections)
     )
 
-    response = model.generate_content(prompt)
+    response = client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=prompt,
+    )
     return response.text
