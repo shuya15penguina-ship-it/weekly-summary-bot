@@ -1,8 +1,8 @@
 import os
 from datetime import datetime, timedelta, timezone
 
+import anthropic
 import discord
-from google import genai
 
 JST = timezone(timedelta(hours=9))
 
@@ -20,7 +20,7 @@ async def collect_messages(channel: discord.TextChannel, since: datetime) -> lis
 
 
 async def generate_summary(channels_messages: dict[str, list[str]]) -> str:
-    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+    client = anthropic.AsyncAnthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
     sections = []
     for ch_name, lines in channels_messages.items():
@@ -43,8 +43,11 @@ async def generate_summary(channels_messages: dict[str, list[str]]) -> str:
         + "\n\n".join(sections)
     )
 
-    response = client.models.generate_content(
-        model="gemini-2.0-flash",
-        contents=prompt,
-    )
-    return response.text
+    async with client.messages.stream(
+        model="claude-opus-4-8",
+        max_tokens=4096,
+        messages=[{"role": "user", "content": prompt}],
+    ) as stream:
+        message = await stream.get_final_message()
+
+    return "".join(b.text for b in message.content if b.type == "text")
